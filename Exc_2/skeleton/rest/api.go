@@ -74,8 +74,10 @@ func PostOrder(db *repository.DatabaseHandler) http.HandlerFunc {
 		// err := json.NewDecoder(r.Body).Decode(&<your-order-struct>)
 		// handle error and render Status 400
 		// add to db
-		var ord model.Order
-		if err := json.NewDecoder(r.Body).Decode(&ord); err != nil {
+		var ord model.Order // declares a variable ord of type model.Order
+
+		// Try to read the JSON body and store it in ord. If that fails, handle the error
+		if err := json.NewDecoder(r.Body).Decode(&ord); err != nil { // Creates a new JSON decoder for the HTTP request body
 			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, map[string]string{"error": "invalid JSON"})
 			return
