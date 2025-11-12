@@ -10,8 +10,27 @@ volumes:
 services:
   traefik:
     image: "traefik:v3.5.2"
-    # todo add traefik config
-    # todo only expose network web
+    ### todo add traefik config
+    container_name: traefik
+    command:
+      # for Traefik dashboard on :8080
+      - "--api.insecure=true"
+      # for automatic Docker service discovery
+      - "--providers.docker=true"
+      # in order to prevent exposure of all containers by default
+      - "--providers.docker.exposedbydefault=false"
+      # this is the HTTP entrypoint for routing (=> port 8081 inside container bc 80 is taken by docker already)
+      - "--entrypoints.web.address=:8081"
+    ports:
+      - "8081:8081" # web traffic => HTTP routing entrypoint
+      - "8080:8080" # for Traefik dashboard
+      - "80:80" # for swagger ergo orders.localhost
+      - "443:443" # for localhost
+    volumes:
+    # confusing stuff; for Traefik so that it can read container metadata ("mounts Docker socket")
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    ### todo only expose network web
     networks:
       - web
 
@@ -19,8 +38,26 @@ services:
   orderservice:
     container_name: orderservice
     build: .
-    command: [ "/app/ordersystem" ]
-    # todo add traefik labels
+    # external script that enables waiting until database is running bc this takes some seconds
+    command: ["sh", "/app/wait-for-postgres.sh"]
+    depends_on:
+      - order-postgres
+    ### todo add traefik labels
+    # container port 3000 in order to expose the service at orders.localhost
+    labels:
+      # for Traefik for this service
+      - "traefik.enable=true"
+      # set network to our web network for routing
+      - "traefik.docker.network=web"
+      # mapping of hostname orders.localhost to this service
+      - "traefik.http.routers.orders.rule=Host(`orders.localhost`)"
+      # makes sure that traefik uses the web entrypoint
+      - "traefik.http.routers.orders.entrypoints=web"
+      # priority to avoid routing conflicts (technically optional)
+      - "traefik.http.routers.orders.priority=10"
+      # for internal container port 3000
+      - "traefik.http.services.orders.loadbalancer.server.port=3000"
+    # db credentials (this technically should be in an .env file)
     environment:
       - POSTGRES_DB=order
       - POSTGRES_USER=docker
@@ -33,21 +70,40 @@ services:
 
   sws:
     image: joseluisq/static-web-server:latest
-    # todo add frontend folder as volume
-    # todo setup environment variables to expose port 80 and serve the frontend folder
-    # todo add traefik labels
+    ### todo add frontend folder as volume
+    container_name: sws
+    # mounts folder into the container at /public
+    volumes:
+      - ./frontend:/public:ro
+
+    ### todo setup environment variables to expose port 80 and serve the frontend folder
+    environment:
+      # specifies where the root folder is located in the container
+      - SERVER_ROOT=/public
+      # port 80 for static web hosting
+      - SERVER_PORT=80
+
+    ### todo add traefik labels
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      # this gets 'localhost' and routes it to the fronted
+      - "traefik.http.routers.sws.rule=Host(`localhost`)"
+      - "traefik.http.routers.sws.entrypoints=web"
+      - "traefik.http.services.sws.loadbalancer.server.port=80"
     networks:
       - web
 
   order-postgres:
-    image: postgres:latest
+    image: postgres:18
+    container_name: order-postgres
     restart: always
     networks:
       - intercom
     volumes:
-      - order_pg_vol:/var/lib/postgresql/18/docker
+      - order_pg_vol:/var/lib/postgresql
     ports:
-      - "5432:5432"
+      - "55432:5432" # Changed port to database because it kept bugging
     environment:
       - POSTGRES_DB=order
       - POSTGRES_USER=docker

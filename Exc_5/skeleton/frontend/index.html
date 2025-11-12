@@ -54,7 +54,7 @@
     const drinkMap = new Map(); // drink_id => drink object
 
     // Fetch and display the drink menu
-    fetch("http://orders.localhost/api/menu")
+    fetch("http://orders.localhost:8081/api/menu")
         .then(res => res.json())
         .then(drinks => {
             menuList.innerHTML = "";
@@ -75,7 +75,7 @@
         });
 
     function loadOrderTotalled() {
-        fetch("http://orders.localhost/api/order/totalled")
+        fetch("http://orders.localhost:8081/api/order/totalled")
             .then(res => res.json())
             .then(orders => {
                 const labels = [];
@@ -127,7 +127,7 @@
     }
 
     function loadOrders() {
-        fetch("http://orders.localhost/api/order/all")
+        fetch("http://orders.localhost:8081/api/order/all")
             .then(res => res.json())
             .then(orders => {
                 if (orders.length === 0) {
