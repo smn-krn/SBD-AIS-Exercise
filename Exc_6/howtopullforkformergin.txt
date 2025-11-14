@@ -1,0 +1,6 @@
+1	git remote -v		Check remotes
+2	git fetch upstream	Fetch latest from original repo
+3	git checkout main	Switch to main
+4	git pull origin main	Update your fork’s main
+5	git merge upstream/main	Merge changes from original repo
+6	git push origin main
