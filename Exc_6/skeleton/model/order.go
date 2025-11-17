@@ -10,7 +10,22 @@ const (
 
 	// todo create markdown emplate, fields should be able to be populated with fmt.Sprintf
 	markdownTemplate = `
+# Order Receipt
 
+**Order ID:** %d  
+**Customer:** %s  
+**Created At:** %s  
+
+---
+
+## Items
+%s
+
+---
+
+### Total Price: **€ %.2f**
+
+Thank you for your order!
 `
 )
 
