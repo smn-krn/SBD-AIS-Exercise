@@ -15,7 +15,10 @@ type GrpcClient struct {
 }
 
 func NewGrpcClient() (*GrpcClient, error) {
-	conn, err := grpc.NewClient(":4000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(
+		"localhost:4000",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -24,12 +27,39 @@ func NewGrpcClient() (*GrpcClient, error) {
 }
 
 func (c *GrpcClient) Run() error {
-	// todo
-	// 1. List drinks
-	// 2. Order a few drinks
-	// 3. Order more drinks
-	// 4. Get order total
-	//
-	// print responses after each call
+	fmt.Println("Requesting drinks")
+
+	drinksResp, _ := c.client.GetDrinks(context.Background(), &emptypb.Empty{})
+
+	fmt.Println("Available drinks:")
+	for _, d := range drinksResp.Drinks {
+		fmt.Printf("\t> id:%d  name:%q  price:%d  description:%q\n", d.Id, d.Name, d.Price, d.Description)
+	}
+
+	order := func(q int32) {
+		req := &pb.OrderRequest{
+			Items: []*pb.OrderItem{
+				{DrinkId: 1, Quantity: q},
+				{DrinkId: 2, Quantity: q},
+				{DrinkId: 3, Quantity: q},
+			},
+		}
+		c.client.OrderDrink(context.Background(), req)
+	}
+
+	fmt.Println("Ordering drinks")
+	order(2)
+
+	fmt.Println("Ordering another round")
+	order(6)
+
+	fmt.Println("Getting the bill...")
+	totals, _ := c.client.GetOrders(context.Background(), &emptypb.Empty{})
+
+	for _, t := range totals.Totals {
+		name := drinksResp.Drinks[t.DrinkId-1].Name
+		fmt.Printf("\t> Total: %d x %s\n", t.Quantity, name)
+	}
+
 	return nil
 }

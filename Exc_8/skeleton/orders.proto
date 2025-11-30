@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "exc8/pb";
+
+package exc8;
+
+message Drink {
+  int32 id = 1;
+  string name = 2;
+  int32 price = 3;
+  string description = 4;
+}
+
+message DrinkList {
+  repeated Drink drinks = 1;
+}
+
+message OrderItem {
+  int32 drink_id = 1;
+  int32 quantity = 2;
+}
+
+message OrderRequest {
+  repeated OrderItem items = 1;
+}
+
+message OrderResponse {
+  repeated OrderItem totals = 1;
+}
+
+service OrderService {
+  rpc GetDrinks (google.protobuf.Empty) returns (DrinkList);
+  rpc OrderDrink (OrderRequest) returns (google.protobuf.BoolValue);
+  rpc GetOrders (google.protobuf.Empty) returns (OrderResponse);
+}
