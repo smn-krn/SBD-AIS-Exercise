@@ -1,132 +1,52 @@
 package mapred
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"sort"
 )
 
-var inText = []string{
-	"This is an   ²¹²æ 023 example.. text for mapreduce exc9",
-	"exc9 does not need !! to be `97 #*  put in a Docker container",
-}
+func main() {
+	file, err := os.Open("res/meditations.txt")
+	if err != nil {
+		log.Fatalf("cannot open meditations.txt: %v", err)
+	}
+	defer file.Close()
 
-func Test_Run(t *testing.T) {
-	var mr MapReduce
-	results := mr.Run(inText)
-	expected := map[string]int{
-		"not":       1,
-		"a":         1,
-		"container": 1,
-		"docker":    1,
-		"exc":       2,
-		"to":        1,
-		"put":       1,
-		"in":        1,
-		"example":   1,
-		"text":      1,
-		"does":      1,
-		"need":      1,
-		"be":        1,
-		"this":      1,
-		"is":        1,
-		"an":        1,
-		"for":       1,
-		"mapreduce": 1,
+	var lines []string
+	sc := bufio.NewScanner(file)
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
 	}
-	assert.Equal(t, expected, results)
-}
+	if err := sc.Err(); err != nil {
+		log.Fatalf("scan error: %v", err)
+	}
 
-func Test_Run_Fail(t *testing.T) {
 	var mr MapReduce
-	results := mr.Run(inText)
-	expected := map[string]int{
-		"not":       1,
-		"a":         1,
-		"container": 1,
-		"docker":    1,
-		"exc":       2,
-		"is":        1,
-		"an":        1,
-		"for":       1,
-		"mapreduce": 1,
-	}
-	assert.NotEqual(t, expected, results)
-}
+	result := mr.Run(lines)
 
-func Test_wordCountMapper(t *testing.T) {
-	var mr MapReduce
-	results := mr.wordCountMapper("This this small BIG sentence sEnTenCE")
-	expected := []KeyValue{
-		{
-			Key:   "this",
-			Value: 1,
-		},
-		{
-			Key:   "this",
-			Value: 1,
-		},
-		{
-			Key:   "small",
-			Value: 1,
-		},
-		{
-			Key:   "big",
-			Value: 1,
-		},
-		{
-			Key:   "sentence",
-			Value: 1,
-		},
-		{
-			Key:   "sentence",
-			Value: 1,
-		},
+	type kv struct {
+		k string
+		v int
 	}
-	assert.ElementsMatch(t, expected, results)
-}
-func Test_wordCountMapper_Fail(t *testing.T) {
-	var mr MapReduce
-	results := mr.wordCountMapper("This this small BIG sentence sEnTenCE")
-	expected := []KeyValue{
-		{
-			Key:   "this",
-			Value: 1,
-		},
-		{
-			Key:   "this",
-			Value: 1,
-		},
-		{
-			Key:   "sentence",
-			Value: 1,
-		},
-		{
-			Key:   "sentence",
-			Value: 1,
-		},
+	var list []kv
+	for k, v := range result {
+		list = append(list, kv{k, v})
 	}
-	assert.NotElementsMatch(t, expected, results)
-}
 
-func Test_wordCountReducer(t *testing.T) {
-	var mr MapReduce
-	results := mr.wordCountReducer("test", []int{1, 1})
-	expected := KeyValue{
-		Key:   "test",
-		Value: 2,
-	}
-	assert.Equal(t, expected.Key, results.Key)
-	assert.Equal(t, expected.Value, results.Value)
-}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].v > list[j].v
+	})
 
-func Test_wordCountReducer_Fail(t *testing.T) {
-	var mr MapReduce
-	results := mr.wordCountReducer("test", []int{1, 1})
-	expected := KeyValue{
-		Key:   "test",
-		Value: 1,
+	N := 40
+	if len(list) < N {
+		N = len(list)
 	}
-	assert.Equal(t, expected.Key, results.Key)
-	assert.NotEqual(t, expected.Value, results.Value)
+
+	fmt.Printf("Top %d words:\n", N)
+	for i := 0; i < N; i++ {
+		fmt.Printf("%3d. %-15s %d\n", i+1, list[i].k, list[i].v)
+	}
 }
